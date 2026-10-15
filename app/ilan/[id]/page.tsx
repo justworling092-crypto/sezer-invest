@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ShieldCheck, MapPin, Building2, Phone, ArrowLeft, Compass } from 'lucide-react';
 import Link from 'next/link';
@@ -23,175 +23,123 @@ interface Listing {
   created_at: string;
 }
 
-export default function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
+export default function ListingDetailPage({ params }: { params: { id: string } }) {
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchListing() {
+      if (!params?.id) return;
+      
       const { data, error } = await supabase
         .from('listings')
         .select('*')
-        .eq('id', resolvedParams.id)
+        .eq('id', params.id)
         .single();
 
-      if (!error && data) {
+      if (error) {
+        console.error('İlan çekilirken hata oluştu:', error);
+      } else {
         setListing(data);
       }
       setLoading(false);
     }
 
     fetchListing();
-  }, [resolvedParams.id]);
+  }, [params?.id]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">
-        İlan detayları yükleniyor...
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 h-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   if (!listing) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center space-y-4">
-        <h2 className="text-xl font-bold text-slate-800">İlan Bulunamadı</h2>
-        <Link href="/" className="text-blue-600 hover:underline text-sm font-medium">
-          Ana Sayfaya Dön
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">İlan Bulunamadı</h1>
+        <p className="text-gray-600 mb-6">Aradığınız ilan yayından kaldırılmış veya erişilemiyor olabilir.</p>
+        <Link href="/" className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+          <ArrowLeft className="w-4 h-4" /> Ana Sayfaya Dön
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-16">
-      {/* Üst Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-blue-600 font-medium">
-            <ArrowLeft className="w-4 h-4" /> İlanlara Dön
-          </Link>
-          <span className="text-xs font-semibold px-3 py-1 bg-slate-100 rounded-full text-slate-600 capitalize">
-            {listing.listing_type}
-          </span>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-5xl mx-auto px-4">
+        <Link href="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6">
+          <ArrowLeft className="w-4 h-4" /> Tüm İlanlara Dön
+        </Link>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
-        {/* Başlık ve Fiyat */}
-        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full font-medium">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" /> {listing.city} / {listing.district} {listing.neighborhood && `/ ${listing.neighborhood}`}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6 border-b border-gray-100">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
+              <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full uppercase tracking-wider">
+                {listing.listing_type} - {listing.property_type}
               </span>
               {listing.is_eids_verified && (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Yetkili & Onaylı Portföy
+                <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" /> EİDS Onaylı İlan
                 </span>
               )}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-tight">
-              {listing.title}
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">{listing.title}</h1>
+            <p className="flex items-center text-gray-500 text-sm gap-1">
+              <MapPin className="w-4 h-4 text-gray-400" />
+              {listing.district}, {listing.city} {listing.neighborhood ? `(${listing.neighborhood})` : ''}
+            </p>
           </div>
 
-          <div className="md:text-right border-t md:border-t-0 pt-4 md:pt-0 border-slate-100">
-            <div className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Portföy Bedeli</div>
-            <div className="text-3xl font-black text-blue-600">
-              {Number(listing.price).toLocaleString('tr-TR')} TL
+          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">İlan Açıklaması</h2>
+                <p className="text-gray-600 leading-relaxed whitespace-pre-line">{listing.description}</p>
+              </div>
+
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">Özellikler</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <span className="text-xs text-gray-500 block">Oda Sayısı</span>
+                    <span className="text-sm font-semibold text-gray-800">{listing.bedrooms}</span>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <span className="text-xs text-gray-500 block">Net Alan</span>
+                    <span className="text-sm font-semibold text-gray-800">{listing.net_sqm} m²</span>
+                  </div>
+                  {listing.gross_sqm && (
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <span className="text-xs text-gray-500 block">Brüt Alan</span>
+                      <span className="text-sm font-semibold text-gray-800">{listing.gross_sqm} m²</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Sol Kolon: Sanal Tur ve Açıklama */}
-          <div className="lg:col-span-2 space-y-8">
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                <span className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <Compass className="w-4 h-4 text-blue-600" /> 360° Sanal Tur & Mekan Görünümü
+            <div className="space-y-4">
+              <div className="bg-blue-50/50 border border-blue-100 p-5 rounded-xl">
+                <span className="text-xs text-gray-500 block mb-1">Fiyat</span>
+                <span className="text-2xl font-extrabold text-blue-600">
+                  {listing.price?.toLocaleString('tr-TR')} ₺
                 </span>
-                <span className="text-xs text-slate-500 font-medium">İnteraktif Deneyim</span>
-              </div>
-              
-              <div className="h-96 bg-slate-900 relative flex flex-col items-center justify-center text-white p-6 text-center">
-                <Building2 className="w-16 h-16 text-slate-600 mb-4 animate-pulse" />
-                <h3 className="text-lg font-bold mb-2">360° Sanal Tur Aktif</h3>
-                <p className="text-xs text-slate-400 max-w-md">
-                  Mülkün iç mekan detaylarını dijital tur ile keşfedin.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
-              <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">
-                Açıklama & Detaylar
-              </h3>
-              <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">
-                {listing.description || 'Bu ilan için henüz detaylı açıklama girilmemiştir.'}
-              </p>
-            </div>
-          </div>
-
-          {/* Sağ Kolon: Özellikler ve İletişim */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
-              <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3">
-                Genel Bilgiler
-              </h3>
-              
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between py-1.5 border-b border-slate-50">
-                  <span className="text-slate-500">Kategori</span>
-                  <span className="font-semibold text-slate-900">{listing.property_type}</span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-50">
-                  <span className="text-slate-500">İşlem Türü</span>
-                  <span className="font-semibold text-slate-900 capitalize">{listing.listing_type}</span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-50">
-                  <span className="text-slate-500">Net Alan</span>
-                  <span className="font-semibold text-slate-900">{listing.net_sqm} m²</span>
-                </div>
-                {listing.gross_sqm && (
-                  <div className="flex justify-between py-1.5 border-b border-slate-50">
-                    <span className="text-slate-500">Brüt Alan</span>
-                    <span className="font-semibold text-slate-900">{listing.gross_sqm} m²</span>
-                  </div>
-                )}
-                <div className="flex justify-between py-1.5 border-b border-slate-50">
-                  <span className="text-slate-500">Oda / Bölüm</span>
-                  <span className="font-semibold text-slate-900">{listing.bedrooms}</span>
-                </div>
-                {listing.ttbs_no && (
-                  <div className="flex justify-between py-1.5 text-xs text-emerald-700 bg-emerald-50/50 px-2 rounded">
-                    <span>TTBS Yetki No</span>
-                    <span className="font-mono font-bold">{listing.ttbs_no}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-6 shadow-md space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                  SI
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm">Sezer Invest</h4>
-                  <p className="text-xs text-slate-400">Kurumsal Gayrimenkul Danışmanlığı</p>
-                </div>
               </div>
 
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-sm text-sm">
-                <Phone className="w-4 h-4" /> Portföy Yöneticisini Ara
-              </button>
+              {listing.ttbs_no && (
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                  <span className="text-xs text-gray-500 block mb-1">TTBS Yetki Belge No</span>
+                  <span className="text-sm font-mono font-medium text-gray-700">{listing.ttbs_no}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
